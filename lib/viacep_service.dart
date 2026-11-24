@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -20,11 +21,13 @@ class Endereco {
 
   factory Endereco.fromJson(Map<String, dynamic> json) {
     return Endereco(
-      cep: (json['cep'] ?? '') as String,
-      logradouro: (json['logradouro'] ?? '') as String,
-      bairro: (json['bairro'] ?? '') as String,
-      localidade: (json['localidade'] ?? '') as String,
-      uf: (json['uf'] ?? '') as String,
+      cep: json['cep'] is String ? json['cep'] as String : '',
+      logradouro:
+          json['logradouro'] is String ? json['logradouro'] as String : '',
+      bairro: json['bairro'] is String ? json['bairro'] as String : '',
+      localidade:
+          json['localidade'] is String ? json['localidade'] as String : '',
+      uf: json['uf'] is String ? json['uf'] as String : '',
     );
   }
 }
@@ -49,13 +52,17 @@ class ViaCepService {
     final uri = Uri.parse('https://viacep.com.br/ws/$somenteNumeros/json/');
 
     try {
-      final resposta = await http.get(uri);
+      final resposta = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (resposta.statusCode != 200) {
         throw const CepException('CEP inválido ou serviço indisponível.');
       }
 
-      final dados = jsonDecode(resposta.body) as Map<String, dynamic>;
+      final decoded = jsonDecode(resposta.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw const CepException('Resposta inválida do serviço ViaCEP.');
+      }
+      final dados = decoded;
 
       if (dados['erro'] == true || dados['erro'] == 'true') {
         throw const CepException('CEP não encontrado.');
